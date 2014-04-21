@@ -1,0 +1,2 @@
+An implementation of Twilio REST API in Twisted.
+Currently, it is able to send SMS only.
