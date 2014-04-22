@@ -7,15 +7,19 @@ Created on Apr 18, 2014
 import urllib
 import json
 from twisted.internet import reactor
-from twisted.web.client import Agent
+from twisted.web.client import Agent, ProxyAgent
 from twisted.web.http_headers import Headers
 from twisted.internet.defer import Deferred
 from twisted.internet.protocol import Protocol
 from twisted.web.client import FileBodyProducer
 from StringIO import StringIO
 from twiliotwisted.TwilioException import ErrorResponseException, ErrorResultException
+from twiliotwisted.SSLVerifiedClientContextFactory import SSLVerifiedClientContextFactory
+from twisted.internet.endpoints import TCP4ClientEndpoint
 from email import base64mime
 
+
+#from OpenSSL.crypto import load_certificate
 
 TWILIO_REST_API_URI = 'https://api.twilio.com/'
 REST_API_VERSION = '2010-04-01'
@@ -37,6 +41,7 @@ class ResponseBody(Protocol):
 
     def connectionLost(self, reason):
         self.deferred.callback(self)
+
         
 class TwilioResponseBody(ResponseBody):
             
@@ -49,12 +54,24 @@ class TwilioResponseBody(ResponseBody):
 class TwilioSMSMessage():
     """
     Use Twilio REST API to send SMS
-    TODO: SSL CA cert
-    TODO: Proxy
     """
 
-    def __init__(self, auth):
-        self.agent = Agent(reactor)
+    def __init__(self, auth, verify=True, verify_location='/etc/ssl/certs/', proxy=None):
+        """
+        auth: {"account_sid": account_sid, "auth_token": auth_token}
+        verify: SSL certificate verification
+        verify_location: path to your certificates folder (.pem format)
+        proxy: ([str]host, [int]port)
+        """
+        contextFactory = SSLVerifiedClientContextFactory(verify = verify, verify_location = verify_location)
+        agent = None
+        if proxy:
+            host, port = proxy
+            endpoint = TCP4ClientEndpoint(reactor, host, port)
+            agent = ProxyAgent(endpoint)
+        else:
+            agent = Agent(reactor, contextFactory)
+        self.agent = agent
         self.account_sid = auth['account_sid']
         self.auth_token = auth['auth_token']
         self._generate_url()
@@ -104,6 +121,7 @@ class TwilioSMSMessage():
     
     def _get_response_error(self, error):
         logging.debug('_get_response_error')
+        logging.error(error)        
         raise ErrorResponseException()
         
     def _get_result(self, response):     
@@ -149,6 +167,6 @@ if __name__ == "__main__":
         d = message.send_message(sms)
         d.addCallback(print_response)
         d.addErrback(error_response)
-    
-    test_sample()
+    for _ in range(2):
+        test_sample()
     reactor.run()

@@ -6,8 +6,8 @@ Created on Apr 21, 2014
 from TwilioSMSMessage import TwilioSMSMessage
 
 class TwilioSMSClient():
-    def __init__(self, auth):
-        self.SMSMessage = TwilioSMSMessage(auth)
+    def __init__(self, auth, verify=True, proxy=None):
+        self.SMSMessage = TwilioSMSMessage(auth, verify, proxy)
     
     def get_result(self, result):
         """implement this to handle sending result"""
